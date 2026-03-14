@@ -14,6 +14,20 @@
   padding-bottom: 0.75rem;
 }
 
+.form-section {
+  border: 1px solid #e8edf2;
+  border-radius: 6px;
+  padding: 0.75rem 1rem 0.25rem;
+  margin-bottom: 1rem;
+}
+
+.form-section legend {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #1a2e44;
+  padding: 0 0.4rem;
+}
+
 .form-group {
   display: flex;
   flex-direction: column;
