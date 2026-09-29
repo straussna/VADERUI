@@ -26,3 +26,4 @@ dist-ssr
 # .NET build artifacts
 api/bin/
 api/obj/
+/.agents/
