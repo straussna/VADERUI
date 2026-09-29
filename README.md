@@ -13,7 +13,7 @@ A React + TypeScript single-page application backed by an ASP.NET Core Web API t
 | Charting | Plotly.js via react-plotly.js |
 | Forms | React Hook Form |
 | HTTP client | Axios |
-| Backend framework | ASP.NET Core 8 Minimal API |
+| Backend framework | ASP.NET Core 10 Minimal API |
 | Simulation engine | [SoluteTransport](https://github.com/straussna/SoluteTransport) NuGet package |
 
 ---
@@ -21,7 +21,7 @@ A React + TypeScript single-page application backed by an ASP.NET Core Web API t
 ## Prerequisites
 
 - **Node.js 18+** (includes npm)
-- **.NET 8 SDK**
+- **.NET 10 SDK**
 
 ---
 
