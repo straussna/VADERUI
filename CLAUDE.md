@@ -5,7 +5,7 @@ React + TypeScript frontend (Vite, repository root) and ASP.NET Core API (`api/`
 
 ## Runtime
 
-- Node v24.21.0 and npm 11.19.0 from PATH for the frontend. npm is the package manager
+- Node 24 and npm from PATH for the frontend. npm is the package manager
   (`package-lock.json`); there is no yarn or pnpm.
 - .NET SDK 10.0.401 for the API (`net10.0`). `SoluteTransport` restores from the bundled
   `api/packages/SoluteTransport.1.0.0.nupkg` through `api/nuget.config`.
