@@ -11,6 +11,9 @@ React + TypeScript frontend (Vite, repository root) and ASP.NET Core API (`api/`
   `api/packages/SoluteTransport.1.0.0.nupkg` through `api/nuget.config`.
 - There is no test suite.
 
+In the Bash tool, prefix each command with `cd /c/source/repos/VADERUI &&`
+(from a worktree, its own path).
+
 Commands run from the repository root and are identical in the Bash tool and PowerShell:
 
 | Task | Command |
