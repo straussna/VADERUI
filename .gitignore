@@ -27,3 +27,6 @@ dist-ssr
 api/bin/
 api/obj/
 /.agents/
+
+# Markdown (agent guides stay local)
+*.md
