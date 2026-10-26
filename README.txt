@@ -36,7 +36,7 @@ Project structure
   api/                          ASP.NET Core backend
     VADERUI.Api.csproj
     nuget.config                Includes GitHub Packages + local fallback
-    packages/                   Bundled SoluteTransport.1.0.0.nupkg
+    packages/                   Bundled SoluteTransport.1.1.0.nupkg
     Models/
       SimulationRequest.cs
       SimulationSnapshot.cs
@@ -61,7 +61,7 @@ Setup and running
      dotnet run
 
    The SoluteTransport NuGet package is sourced from the bundled
-   api/packages/SoluteTransport.1.0.0.nupkg file. With a GitHub Personal Access
+   api/packages/SoluteTransport.1.1.0.nupkg file. With a GitHub Personal Access
    Token that has read:packages scope, it can also be pulled from GitHub
    Packages by setting GITHUB_TOKEN in the environment.
 
@@ -105,7 +105,8 @@ API
 POST /api/calculate
 
 Runs the 1-D ADE simulation and returns concentration profiles at
-evenly-spaced time snapshots.
+evenly-spaced time snapshots, the last at totalDuration. Distances are
+segment centres, (i + 0.5) * dx from the upstream boundary.
 
 Request body:
 
@@ -140,7 +141,7 @@ Response: an array of snapshots, one per output time step:
   [
     {
       "time": 360.0,
-      "distance": [0.5, 1.0, 1.5, "..."],
+      "distance": [0.25, 0.75, 1.25, "..."],
       "mainChannel": [0.0, 0.12, 0.35, "..."],
       "storageZone": [0.0, 0.08, 0.22, "..."],
       "sediment": [0.0, 0.0, 0.0, "..."]

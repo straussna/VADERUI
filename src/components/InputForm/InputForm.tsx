@@ -58,19 +58,19 @@ const PARAMETER_FIELDS: Record<
   FieldMeta
 > = {
   a:          { label: 'Main-Channel Area A (m²)',           min: 0 },
-  aS:         { label: 'Storage-Zone Area Aₛ (m²)',         min: 0 },
+  aS:         { label: 'Storage-Zone Area Aₛ (m²)',         min: 0, allowZero: true },
   cL:         { label: 'Lateral Inflow Conc. Cₗ (kg/m³)',  min: 0, allowZero: true },
-  d:          { label: 'Dispersion Coefficient D (m²/s)',   min: 0 },
+  d:          { label: 'Dispersion Coefficient D (m²/s)',   min: 0, allowZero: true },
   q:          { label: 'Flow Rate Q (m³/s)',                min: 0 },
   qLin:       { label: 'Lateral Inflow Qₗᵢₙ (m²/s)',       min: 0, allowZero: true },
   alpha:      { label: 'Storage Exchange α (1/s)',           min: 0, allowZero: true },
-  chatS:      { label: 'Storage Equilib. Conc. Ĉₛ (kg/m³)',min: 0, allowZero: true },
-  kd:         { label: 'Partition Coeff. Kd (m³/kg)',       min: 0, allowZero: true },
+  chatS:      { label: 'Storage Background Conc. Ĉₛ (kg/m³)', min: 0, allowZero: true },
+  kd:         { label: 'Distribution Coeff. Kd (m³/kg)',    min: 0, allowZero: true },
   lambda:     { label: 'Decay Rate λ (1/s)',                min: 0, allowZero: true },
   lambdaS:    { label: 'Storage Decay λₛ (1/s)',           min: 0, allowZero: true },
-  lambdaHat:  { label: 'Sediment Desorption λ̂ (1/s)',      min: 0, allowZero: true },
-  lambdaHatS: { label: 'Storage Desorption λ̂ₛ (1/s)',     min: 0, allowZero: true },
-  rho:        { label: 'Sediment Density ρ (kg/m³)',        min: 0, allowZero: true },
+  lambdaHat:  { label: 'Sorption Rate λ̂ (1/s)',            min: 0, allowZero: true },
+  lambdaHatS: { label: 'Storage Sorption Rate λ̂ₛ (1/s)',  min: 0, allowZero: true },
+  rho:        { label: 'Accessible Sediment ρ (kg/m³ water)', min: 0, allowZero: true },
 };
 
 export default function InputForm({ onSubmit, isLoading = false }: InputFormProps) {

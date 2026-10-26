@@ -28,10 +28,6 @@ app.MapPost("/api/calculate", (SimulationRequest req) =>
         return Results.BadRequest("dx must be positive.");
     if (req.OutputTimeSteps < 1)
         return Results.BadRequest("outputTimeSteps must be at least 1.");
-    if (req.Parameters.A == 0)
-        return Results.BadRequest("A (main-channel cross-sectional area) must be non-zero.");
-    if (req.Parameters.AS == 0)
-        return Results.BadRequest("AS (storage-zone cross-sectional area) must be non-zero.");
 
     var parameters = new StreamParameters(
         A: req.Parameters.A,
@@ -49,11 +45,12 @@ app.MapPost("/api/calculate", (SimulationRequest req) =>
         LambdaHatS: req.Parameters.LambdaHatS,
         Rho: req.Parameters.Rho);
 
-    int totalSteps = (int)(req.TotalDuration / req.Dt);
+    // One upstream-boundary value per time level j (time j * dt), 0 … totalSteps.
+    int totalSteps = (int)Math.Round(req.TotalDuration / req.Dt);
     int boundarySteps = (int)(req.UpstreamDuration / req.Dt);
 
-    double[] upstreamBoundary = new double[totalSteps];
-    for (int i = 0; i < Math.Min(boundarySteps, totalSteps); i++)
+    double[] upstreamBoundary = new double[totalSteps + 1];
+    for (int i = 0; i < Math.Min(boundarySteps, totalSteps + 1); i++)
         upstreamBoundary[i] = req.UpstreamConcentration;
 
     SimulationResult result;
@@ -75,24 +72,24 @@ app.MapPost("/api/calculate", (SimulationRequest req) =>
     }
 
     int numberOfSegments = result.C.GetLength(0);
-    int numberOfTimeSteps = result.C.GetLength(1);
+    int numberOfTimeLevels = result.C.GetLength(1);
 
-    // Build distance array (segment midpoints from dx/2 to streamLength - dx/2)
+    // Segment i is centred at (i + 0.5) * dx; the upstream boundary is at x = 0.
     double[] distance = new double[numberOfSegments];
     for (int i = 0; i < numberOfSegments; i++)
         distance[i] = (i + 0.5) * req.Dx;
 
-    // Select evenly-spaced output time steps across [1 .. numberOfTimeSteps-1],
-    // skipping index 0 (the initial all-zero state).
+    // Select evenly-spaced time levels across [1 .. numberOfTimeLevels-1],
+    // skipping level 0 (the initial all-zero state).
     // For snapshot k (0-based), the formula maps to:
-    //   j = round( (k+1) / outputCount * (numberOfTimeSteps - 1) )
-    // so that the last snapshot always lands on the final computed time step.
-    int outputCount = Math.Min(req.OutputTimeSteps, numberOfTimeSteps);
+    //   j = round( (k+1) / outputCount * (numberOfTimeLevels - 1) )
+    // so that the last snapshot lands on the final time level, t = totalDuration.
+    int outputCount = Math.Min(req.OutputTimeSteps, numberOfTimeLevels - 1);
     var snapshots = new List<SimulationSnapshot>(outputCount);
 
     for (int k = 0; k < outputCount; k++)
     {
-        int j = (int)Math.Round((double)(k + 1) / outputCount * (numberOfTimeSteps - 1));
+        int j = (int)Math.Round((double)(k + 1) / outputCount * (numberOfTimeLevels - 1));
 
         double time = j * req.Dt;
         double[] mainChannel = new double[numberOfSegments];

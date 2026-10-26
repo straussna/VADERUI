@@ -5,7 +5,7 @@
 export interface StreamParametersDto {
   /** Main-channel cross-sectional area (m²). */
   a: number;
-  /** Transient-storage zone cross-sectional area (m²). */
+  /** Storage-zone cross-sectional area (m²); may be zero when alpha is zero. */
   aS: number;
   /** Lateral inflow solute concentration (kg/m³). */
   cL: number;
@@ -15,21 +15,21 @@ export interface StreamParametersDto {
   q: number;
   /** Lateral inflow rate per unit length (m²/s). */
   qLin: number;
-  /** Exchange rate between main channel and storage zone (1/s). */
+  /** Storage-zone exchange coefficient α (1/s). */
   alpha: number;
-  /** Equilibrium solute concentration in the storage zone (kg/m³). */
+  /** Background storage-zone solute concentration Ĉ_S (kg/m³). */
   chatS: number;
-  /** Sediment-water partition coefficient (m³/kg). */
+  /** Distribution coefficient K_d (m³/kg). */
   kd: number;
-  /** First-order decay rate in main channel (1/s). */
+  /** Main-channel first-order decay coefficient λ (1/s). */
   lambda: number;
-  /** First-order decay rate in storage zone (1/s). */
+  /** Storage-zone first-order decay coefficient λ_S (1/s). */
   lambdaS: number;
-  /** First-order desorption rate from sediment (1/s). */
+  /** Main-channel sorption rate coefficient λ̂ (1/s). */
   lambdaHat: number;
-  /** First-order desorption rate in storage zone (1/s). */
+  /** Storage-zone sorption rate coefficient λ̂_S (1/s). */
   lambdaHatS: number;
-  /** Sediment bulk density (kg/m³). */
+  /** Mass of accessible sediment per volume of water ρ (kg/m³). */
   rho: number;
 }
 
