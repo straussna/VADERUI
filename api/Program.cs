@@ -43,7 +43,8 @@ app.MapPost("/api/calculate", (SimulationRequest req) =>
         LambdaS: req.Parameters.LambdaS,
         LambdaHat: req.Parameters.LambdaHat,
         LambdaHatS: req.Parameters.LambdaHatS,
-        Rho: req.Parameters.Rho);
+        Rho: req.Parameters.Rho,
+        QLout: req.Parameters.QLout);
 
     // One upstream-boundary value per time level j (time j * dt), 0 … totalSteps.
     int totalSteps = (int)Math.Round(req.TotalDuration / req.Dt);

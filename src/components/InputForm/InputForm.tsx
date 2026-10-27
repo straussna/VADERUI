@@ -30,6 +30,7 @@ const DEFAULT_VALUES: SoluteTransportInput = {
     lambdaHat: 0.0,
     lambdaHatS: 0.0,
     rho: 0.0,
+    qLout: 0.0,
   },
 };
 
@@ -54,15 +55,16 @@ const SIMULATION_FIELDS: Record<
 };
 
 const PARAMETER_FIELDS: Record<
-  'a' | 'aS' | 'cL' | 'd' | 'q' | 'qLin' | 'alpha' | 'chatS' | 'kd' | 'lambda' | 'lambdaS' | 'lambdaHat' | 'lambdaHatS' | 'rho',
+  'a' | 'aS' | 'cL' | 'd' | 'q' | 'qLin' | 'alpha' | 'chatS' | 'kd' | 'lambda' | 'lambdaS' | 'lambdaHat' | 'lambdaHatS' | 'rho' | 'qLout',
   FieldMeta
 > = {
   a:          { label: 'Main-Channel Area A (m²)',           min: 0 },
   aS:         { label: 'Storage-Zone Area Aₛ (m²)',         min: 0, allowZero: true },
   cL:         { label: 'Lateral Inflow Conc. Cₗ (kg/m³)',  min: 0, allowZero: true },
   d:          { label: 'Dispersion Coefficient D (m²/s)',   min: 0, allowZero: true },
-  q:          { label: 'Flow Rate Q (m³/s)',                min: 0 },
+  q:          { label: 'Upstream Flow Rate Q (m³/s)',       min: 0, allowZero: true },
   qLin:       { label: 'Lateral Inflow Qₗᵢₙ (m²/s)',       min: 0, allowZero: true },
+  qLout:      { label: 'Lateral Outflow Qₗₒᵤₜ (m²/s)',     min: 0, allowZero: true },
   alpha:      { label: 'Storage Exchange α (1/s)',           min: 0, allowZero: true },
   chatS:      { label: 'Storage Background Conc. Ĉₛ (kg/m³)', min: 0, allowZero: true },
   kd:         { label: 'Distribution Coeff. Kd (m³/kg)',    min: 0, allowZero: true },

@@ -38,4 +38,5 @@ public record StreamParametersDto(
     double LambdaS,
     double LambdaHat,
     double LambdaHatS,
-    double Rho);
+    double Rho,
+    double QLout = 0);

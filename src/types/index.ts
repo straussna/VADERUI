@@ -11,7 +11,7 @@ export interface StreamParametersDto {
   cL: number;
   /** Longitudinal dispersion coefficient (m²/s). */
   d: number;
-  /** Volumetric flow rate (m³/s). */
+  /** Volumetric flow rate at the upstream boundary (m³/s); downstream, dQ/dx = qLin - qLout. */
   q: number;
   /** Lateral inflow rate per unit length (m²/s). */
   qLin: number;
@@ -31,6 +31,8 @@ export interface StreamParametersDto {
   lambdaHatS: number;
   /** Mass of accessible sediment per volume of water ρ (kg/m³). */
   rho: number;
+  /** Lateral outflow rate per unit length (m²/s). */
+  qLout: number;
 }
 
 export interface SoluteTransportInput {

@@ -36,7 +36,7 @@ Project structure
   api/                          ASP.NET Core backend
     VADERUI.Api.csproj
     nuget.config                Includes GitHub Packages + local fallback
-    packages/                   Bundled SoluteTransport.1.1.0.nupkg
+    packages/                   Bundled SoluteTransport.1.2.0.nupkg
     Models/
       SimulationRequest.cs
       SimulationSnapshot.cs
@@ -61,7 +61,7 @@ Setup and running
      dotnet run
 
    The SoluteTransport NuGet package is sourced from the bundled
-   api/packages/SoluteTransport.1.1.0.nupkg file. With a GitHub Personal Access
+   api/packages/SoluteTransport.1.2.0.nupkg file. With a GitHub Personal Access
    Token that has read:packages scope, it can also be pulled from GitHub
    Packages by setting GITHUB_TOKEN in the environment.
 
@@ -132,7 +132,8 @@ Request body:
       "lambdaS": 0.0,
       "lambdaHat": 0.0,
       "lambdaHatS": 0.0,
-      "rho": 0.0
+      "rho": 0.0,
+      "qLout": 0.0
     }
   }
 
