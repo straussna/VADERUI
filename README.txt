@@ -3,9 +3,11 @@ VADERUI - Solute Transport UI
 
 A React + TypeScript single-page application backed by an ASP.NET Core Web API
 that uses the SoluteTransport NuGet package (https://github.com/straussna/SoluteTransport)
-to run 1-D solute advection-dispersion simulations. Users configure stream
-parameters and view interactive concentration profiles for the main channel,
-transient-storage zone, and sediment.
+to run 1-D solute advection-dispersion simulations. Each parameter has a
+slider over a typical range and a box that accepts any typed value; the
+concentration profiles for the main channel, transient-storage zone and
+sediment recompute as values change. Grids above 2e8 segment-steps wait for
+the Run button instead of recomputing on every change.
 
 The papers behind the transport model are in the SoluteTransport repository's
 documentation site, docs/index.html.
@@ -15,9 +17,10 @@ Tech stack
 ----------
 
   Frontend framework   React 18 + TypeScript
+  Styling              House documentation style (public/style.css) with a
+                       forest-river palette (public/palette.css)
   Build tool           Vite
   Charting             Plotly.js via react-plotly.js
-  Forms                React Hook Form
   HTTP client          Axios
   Backend framework    ASP.NET Core 10 Minimal API
   Simulation engine    SoluteTransport NuGet package
@@ -41,14 +44,18 @@ Project structure
       SimulationRequest.cs
       SimulationSnapshot.cs
     Program.cs                  POST /api/calculate endpoint
+  public/
+    style.css                   House stylesheet
+    palette.css                 Forest-river colour tokens
   src/                          React + TypeScript frontend
-    api/soluteTransport.ts      Axios client
+    api/soluteTransport.ts      Axios client and API error messages
     components/
-      InputForm/                Stream parameters form
+      ParameterControl.tsx      Slider with a typed-value box
       ResultsChart/             Plotly concentration profile chart
-      Layout/                   App shell with header
     types/index.ts              TypeScript interfaces
-    App.tsx                     Root component
+    controls.ts                 Defaults, slider ranges and scales
+    useSimulation.ts            Live recomputation, one request in flight
+    App.tsx                     Page layout
     main.tsx                    Entry point
 
 

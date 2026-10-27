@@ -1,87 +1,133 @@
+import { useMemo } from 'react';
 import Plot from 'react-plotly.js';
 import { SoluteTransportResult } from '../../types';
-import './ResultsChart.css';
+import { formatTime } from '../../format';
+
+export interface SeriesVisibility {
+  mainChannel: boolean;
+  storageZone: boolean;
+  sediment: boolean;
+}
 
 interface ResultsChartProps {
   results: SoluteTransportResult[];
+  visible: SeriesVisibility;
+  /** Zoom and pan persist while this stays the same. */
+  revision: number;
 }
 
-const PALETTE = [
-  '#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd',
-  '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf',
-];
+interface Theme {
+  surface: string;
+  rule: string;
+  ink: string;
+  soft: string;
+  faint: string;
+  ramp: string[];
+}
 
-export default function ResultsChart({ results }: ResultsChartProps) {
-  if (results.length === 0) {
-    return (
-      <div className="chart-placeholder">
-        <p>Configure parameters and click <strong>Calculate</strong> to view results.</p>
-      </div>
-    );
-  }
+function readTheme(): Theme {
+  const css = getComputedStyle(document.documentElement);
+  const token = (name: string) => css.getPropertyValue(name).trim();
+  return {
+    surface: token('--surface'),
+    rule: token('--rule'),
+    ink: token('--ink'),
+    soft: token('--soft'),
+    faint: token('--faint'),
+    ramp: ['--info', '--link', '--ok', '--accent'].map(token),
+  };
+}
 
-  const mainChannelTraces: Plotly.Data[] = results.map((r, i) => ({
-    x: r.distance,
-    y: r.mainChannel,
-    type: 'scatter',
-    mode: 'lines',
-    name: `C  t=${r.time.toFixed(0)}s`,
-    line: { color: PALETTE[i % PALETTE.length], dash: 'solid' },
-    legendgroup: `t${i}`,
-  }));
+/** Colour at fraction `f` along the piecewise-linear ramp through `stops`. */
+function rampColour(stops: string[], f: number): string {
+  const rgb = stops.map((h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)));
+  const x = Math.min(1, Math.max(0, f)) * (rgb.length - 1);
+  const i = Math.min(rgb.length - 2, Math.floor(x));
+  const t = x - i;
+  const c = rgb[i].map((v, k) => Math.round(v + (rgb[i + 1][k] - v) * t));
+  return `rgb(${c.join(',')})`;
+}
 
-  const storageZoneTraces: Plotly.Data[] = results.map((r, i) => ({
-    x: r.distance,
-    y: r.storageZone,
-    type: 'scatter',
-    mode: 'lines',
-    name: `Cs t=${r.time.toFixed(0)}s`,
-    line: { color: PALETTE[i % PALETTE.length], dash: 'dot' },
-    legendgroup: `t${i}`,
-  }));
+export default function ResultsChart({ results, visible, revision }: ResultsChartProps) {
+  const theme = useMemo(readTheme, []);
+  const narrow = window.matchMedia('(max-width: 48rem)').matches;
 
-  const sedimentTraces: Plotly.Data[] = results.map((r, i) => ({
-    x: r.distance,
-    y: r.sediment,
-    type: 'scatter',
-    mode: 'lines',
-    name: `Csed t=${r.time.toFixed(0)}s`,
-    line: { color: PALETTE[i % PALETTE.length], dash: 'dash' },
-    legendgroup: `t${i}`,
-    yaxis: 'y2',
-  }));
+  const traces: Plotly.Data[] = [];
+  results.forEach((r, i) => {
+    const colour = rampColour(theme.ramp, results.length > 1 ? i / (results.length - 1) : 1);
+    const name = `${formatTime(r.time)}`;
+    const series: [boolean, number[], Plotly.Dash, string, string?][] = [
+      [visible.mainChannel, r.mainChannel, 'solid', 'C'],
+      [visible.storageZone, r.storageZone, 'dot', 'C_S'],
+      [visible.sediment, r.sediment, 'dash', 'C_sed', 'y2'],
+    ];
+    let legendShown = false;
+    for (const [on, y, dash, label, axis] of series) {
+      if (!on) continue;
+      traces.push({
+        x: r.distance,
+        y,
+        type: 'scatter',
+        mode: 'lines',
+        name,
+        legendgroup: `t${i}`,
+        showlegend: !legendShown,
+        line: { color: colour, dash, width: dash === 'solid' ? 2 : 1.6 },
+        hovertemplate: `${label} %{y:.4g} at x = %{x:.3g} m, t = ${name}<extra></extra>`,
+        yaxis: axis,
+      });
+      legendShown = true;
+    }
+  });
 
-  const allTraces: Plotly.Data[] = [
-    ...mainChannelTraces,
-    ...storageZoneTraces,
-    ...sedimentTraces,
-  ];
+  const axis = {
+    gridcolor: theme.rule,
+    zerolinecolor: theme.rule,
+    linecolor: theme.rule,
+    tickcolor: theme.rule,
+    tickfont: { color: theme.faint, family: 'Fira Code, monospace', size: 11 },
+    title: { font: { color: theme.soft, size: 12 } },
+  };
 
   const layout: Partial<Plotly.Layout> = {
-    title: { text: 'Solute Transport — Concentration Profiles' },
-    xaxis: { title: { text: 'Distance (m)' } },
-    yaxis: { title: { text: 'Concentration (kg/m³)' } },
+    uirevision: revision,
+    autosize: true,
+    paper_bgcolor: theme.surface,
+    plot_bgcolor: theme.surface,
+    font: { family: 'Fira Sans, system-ui, sans-serif', color: theme.soft },
+    margin: { l: narrow ? 52 : 64, r: visible.sediment ? 64 : 16, t: 12, b: narrow ? 40 : 52 },
+    xaxis: { ...axis, title: { ...axis.title, text: 'Distance from upstream boundary (m)' } },
+    yaxis: { ...axis, title: { ...axis.title, text: 'Concentration (kg/m³)' }, rangemode: 'tozero' },
     yaxis2: {
-      title: { text: 'Sediment Conc. (kg/kg)' },
+      ...axis,
+      title: { ...axis.title, text: 'Sorbed concentration (kg/kg)' },
       overlaying: 'y',
       side: 'right',
+      showgrid: false,
+      rangemode: 'tozero',
+      visible: visible.sediment,
     },
-    legend: { orientation: 'v', font: { size: 11 } },
-    autosize: true,
-    margin: { l: 70, r: 80, t: 50, b: 60 },
-    paper_bgcolor: '#fff',
-    plot_bgcolor: '#f8fafc',
+    showlegend: !narrow,
+    legend: {
+      title: { text: 'Time', font: { color: theme.faint, size: 11 } },
+      font: { color: theme.soft, size: 11 },
+      bgcolor: 'rgba(0,0,0,0)',
+    },
+    hoverlabel: {
+      bgcolor: theme.surface,
+      bordercolor: theme.rule,
+      font: { family: 'Fira Code, monospace', color: theme.ink, size: 11 },
+    },
   };
 
   return (
-    <div className="chart-container">
-      <Plot
-        data={allTraces}
-        layout={layout}
-        useResizeHandler
-        style={{ width: '100%', height: '100%' }}
-        config={{ responsive: true, displayModeBar: true }}
-      />
-    </div>
+    <Plot
+      className="chart"
+      data={traces}
+      layout={layout}
+      useResizeHandler
+      style={{ width: '100%', height: '100%' }}
+      config={{ responsive: true, displaylogo: false, displayModeBar: narrow ? false : 'hover' }}
+    />
   );
 }

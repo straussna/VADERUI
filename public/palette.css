@@ -1,0 +1,24 @@
+/* Forest river palette: shaded water under a conifer canopy. Neutrals are the dark
+   pool and wet bank; the colours are river teal, sunlit moss, rust bark, open sky,
+   foxglove, fern, autumn leaf and wild rose. */
+
+@media screen {
+  :root {
+    --paper:#0D1714;
+    --surface:#13211C;
+    --surface-raised:#1A2C26;
+    --figure-bg:#13211C;
+    --rule:#2A3F37;
+    --ink:#E6EEE7;
+    --soft:#A9BCB2;
+    --faint:#758B81;
+    --link:#5CC3C9;
+    --accent:#D8B24E;
+    --danger:#E06A50;
+    --info:#7FA8E3;
+    --define:#B79BDB;
+    --ok:#8DC96B;
+    --key:#E8915A;
+    --mark:#E886A8;
+  }
+}
