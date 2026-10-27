@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { STANDALONE } from './api/soluteTransport';
 import ObservedData from './components/ObservedData';
 import ParameterControl from './components/ParameterControl';
 import ResultsChart, { SeriesVisibility, StationStyle } from './components/ResultsChart/ResultsChart';
@@ -10,10 +11,10 @@ import { ModelInput, SimulationRequest, SourceMode } from './types';
 import { useSimulation } from './useSimulation';
 import './App.css';
 
+/** Solver time per segment per time step (s): the in-page port, or the API's .NET solver. */
+const SECONDS_PER_SEGMENT_STEP = STANDALONE ? 2e-8 : 8e-9;
 /** Segment-steps above which a run waits for the Run button (about two seconds of solver time). */
-const AUTO_RUN_LIMIT = 2e8;
-/** Solver time per segment per time step (s). */
-const SECONDS_PER_SEGMENT_STEP = 8e-9;
+const AUTO_RUN_LIMIT = 2 / SECONDS_PER_SEGMENT_STEP;
 
 const SERIES: { key: keyof SeriesVisibility; label: string; mark: string }[] = [
   { key: 'mainChannel', label: 'Main channel C', mark: '' },
@@ -263,9 +264,11 @@ export default function App() {
 
       <footer>
         <p>
-          Computed by the SoluteTransport solver behind the VADERUI API. Sliders cover typical
-          ranges; a typed value can be anything the solver accepts. Observed data stay in this
-          browser.
+          {STANDALONE
+            ? 'Computed in this page by a port of the SoluteTransport solver.'
+            : 'Computed by the SoluteTransport solver behind the VADERUI API.'}{' '}
+          Sliders cover typical ranges; a typed value can be anything the solver accepts.
+          Observed data stay in this browser.
         </p>
       </footer>
     </main>

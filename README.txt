@@ -20,12 +20,23 @@ The papers behind the transport model are in the SoluteTransport repository's
 documentation site, docs/index.html.
 
 
+Standalone file
+---------------
+
+  npm run build:standalone
+
+writes dist-standalone/index.html, one self-contained page that opens from
+disk with no server. It runs src/solver/, a TypeScript port of the
+SoluteTransport solver and of POST /api/calculate, in a web worker; its
+results match the API's.
+
+
 Tech stack
 ----------
 
   Frontend framework   React 18 + TypeScript
-  Styling              House documentation style (public/style.css) with a
-                       forest-river palette (public/palette.css)
+  Styling              House documentation style (src/styles/style.css) with a
+                       forest-river palette (src/styles/palette.css)
   Build tool           Vite
   Charting             Plotly.js via react-plotly.js
   HTTP client          Axios
