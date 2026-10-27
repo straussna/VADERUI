@@ -2,6 +2,8 @@ using SoluteTransport;
 using VADERUI.Api.Models;
 using SoluteStream = SoluteTransport.Stream;
 
+const int MaxTimeSamples = 1000;
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddCors(options =>
@@ -26,33 +28,44 @@ app.MapPost("/api/calculate", (SimulationRequest req) =>
         return Results.BadRequest("dt must be positive.");
     if (req.Dx <= 0)
         return Results.BadRequest("dx must be positive.");
-    if (req.OutputTimeSteps < 1)
-        return Results.BadRequest("outputTimeSteps must be at least 1.");
+    if (req.Source is not ("step" or "slug"))
+        return Results.BadRequest("source must be \"step\" or \"slug\".");
+    if (req.Source == "slug" && req.Parameters.Q <= 0)
+        return Results.BadRequest("Q must be positive for a slug source.");
+    if (req.Stations is null || req.Stations.Length == 0)
+        return Results.BadRequest("stations must hold at least one distance.");
+    if (req.Stations.Any(x => !double.IsFinite(x)))
+        return Results.BadRequest("stations must be finite distances.");
 
+    var p = req.Parameters;
     var parameters = new StreamParameters(
-        A: req.Parameters.A,
-        AS: req.Parameters.AS,
-        CL: req.Parameters.CL,
-        D: req.Parameters.D,
-        Q: req.Parameters.Q,
-        QLin: req.Parameters.QLin,
-        Alpha: req.Parameters.Alpha,
-        ChatS: req.Parameters.ChatS,
-        Kd: req.Parameters.Kd,
-        Lambda: req.Parameters.Lambda,
-        LambdaS: req.Parameters.LambdaS,
-        LambdaHat: req.Parameters.LambdaHat,
-        LambdaHatS: req.Parameters.LambdaHatS,
-        Rho: req.Parameters.Rho,
-        QLout: req.Parameters.QLout);
+        A: p.A,
+        AS: p.AS,
+        CL: p.CL,
+        D: p.D,
+        Q: p.Q,
+        QLin: p.QLin,
+        Alpha: p.Alpha,
+        ChatS: p.ChatS,
+        Kd: p.Kd,
+        Lambda: p.Lambda,
+        LambdaS: p.LambdaS,
+        LambdaHat: p.LambdaHat,
+        LambdaHatS: p.LambdaHatS,
+        Rho: p.Rho,
+        QLout: p.QLout);
 
     // One upstream-boundary value per time level j (time j * dt), 0 … totalSteps.
+    // A step holds C0 throughout. A slug sets level 0 only, to 2 M / (Q dt):
+    // the first time step's advective inflow, Q dt (Cbc[0] + Cbc[1]) / 2,
+    // carries mass M, and the dispersive exchange across the upstream face
+    // returns to zero net mass once Cbc is zero.
     int totalSteps = (int)Math.Round(req.TotalDuration / req.Dt);
-    int boundarySteps = (int)(req.UpstreamDuration / req.Dt);
-
-    double[] upstreamBoundary = new double[totalSteps + 1];
-    for (int i = 0; i < Math.Min(boundarySteps, totalSteps + 1); i++)
-        upstreamBoundary[i] = req.UpstreamConcentration;
+    double[] upstreamBoundary = new double[Math.Max(totalSteps, 0) + 1];
+    if (req.Source == "step")
+        Array.Fill(upstreamBoundary, req.UpstreamConcentration);
+    else
+        upstreamBoundary[0] = 2 * req.SlugMass / (p.Q * req.Dt);
 
     SimulationResult result;
     try
@@ -65,49 +78,43 @@ app.MapPost("/api/calculate", (SimulationRequest req) =>
             upstreamBoundary,
             parameters);
 
-        // Evenly-spaced time levels across [1 .. TimeStepCount], skipping
-        // level 0 (the initial all-zero state). Snapshot k (0-based) is
-        //   j = round( (k+1) / outputCount * TimeStepCount )
-        // so the last snapshot lands on t = totalDuration.
-        int outputCount = Math.Min(req.OutputTimeSteps, stream.TimeStepCount);
-        int[] levels = Enumerable.Range(0, outputCount)
-            .Select(k => (int)Math.Round((double)(k + 1) / outputCount * stream.TimeStepCount))
+        // At most MaxTimeSamples + 1 evenly strided levels from 0, ending at TimeStepCount.
+        int stride = (stream.TimeStepCount + MaxTimeSamples - 1) / MaxTimeSamples;
+        var levels = new List<int>();
+        for (int j = 0; j < stream.TimeStepCount; j += stride)
+            levels.Add(j);
+        levels.Add(stream.TimeStepCount);
+
+        int[] segments = req.Stations
+            .Select(x => Math.Clamp((int)Math.Floor(x / req.Dx), 0, stream.SegmentCount - 1))
             .ToArray();
 
-        result = stream.SimulateAdvectionAndDispersion(levels);
+        result = stream.SimulateAdvectionAndDispersion(levels, segments);
     }
     catch (ArgumentException ex)
     {
         return Results.BadRequest(ex.Message);
     }
 
-    int numberOfSegments = result.C.GetLength(0);
-
-    // Segment i is centred at (i + 0.5) * dx; the upstream boundary is at x = 0.
-    double[] distance = new double[numberOfSegments];
-    for (int i = 0; i < numberOfSegments; i++)
-        distance[i] = (i + 0.5) * req.Dx;
-
-    var snapshots = new List<SimulationSnapshot>(result.TimeLevels.Length);
-
-    for (int k = 0; k < result.TimeLevels.Length; k++)
+    int samples = result.TimeLevels.Length;
+    double[] time = result.TimeLevels.Select(j => j * req.Dt).ToArray();
+    var stations = new StationSeries[result.Segments.Length];
+    for (int s = 0; s < stations.Length; s++)
     {
-        double time = result.TimeLevels[k] * req.Dt;
-        double[] mainChannel = new double[numberOfSegments];
-        double[] storageZone = new double[numberOfSegments];
-        double[] sediment = new double[numberOfSegments];
-
-        for (int i = 0; i < numberOfSegments; i++)
+        double[] mainChannel = new double[samples];
+        double[] storageZone = new double[samples];
+        double[] sediment = new double[samples];
+        for (int k = 0; k < samples; k++)
         {
-            mainChannel[i] = result.C[i, k];
-            storageZone[i] = result.CS[i, k];
-            sediment[i] = result.CSed[i, k];
+            mainChannel[k] = result.C[s, k];
+            storageZone[k] = result.CS[s, k];
+            sediment[k] = result.CSed[s, k];
         }
-
-        snapshots.Add(new SimulationSnapshot(time, distance, mainChannel, storageZone, sediment));
+        stations[s] = new StationSeries(
+            req.Stations[s], (result.Segments[s] + 0.5) * req.Dx, mainChannel, storageZone, sediment);
     }
 
-    return Results.Ok(snapshots);
+    return Results.Ok(new BreakthroughResult(time, stations));
 })
 .WithName("Calculate");
 

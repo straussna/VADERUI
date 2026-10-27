@@ -1,6 +1,18 @@
-/** Snapshot time in seconds, minutes or hours, to three significant figures. */
-export function formatTime(seconds: number): string {
-  if (seconds < 120) return `${Number(seconds.toPrecision(3))} s`;
-  if (seconds < 7200) return `${Number((seconds / 60).toPrecision(3))} min`;
-  return `${Number((seconds / 3600).toPrecision(3))} h`;
+/** Unit for a chart's time axis. */
+export interface TimeAxis {
+  unit: 's' | 'min' | 'h';
+  /** Seconds per unit. */
+  factor: number;
+}
+
+/** Seconds below 10 minutes, minutes below 10 hours, hours beyond. */
+export function timeAxisFor(durationSeconds: number): TimeAxis {
+  if (durationSeconds < 600) return { unit: 's', factor: 1 };
+  if (durationSeconds < 36000) return { unit: 'min', factor: 60 };
+  return { unit: 'h', factor: 3600 };
+}
+
+/** Distance to four significant figures. */
+export function formatDistance(metres: number): string {
+  return `${Number(metres.toPrecision(4))} m`;
 }

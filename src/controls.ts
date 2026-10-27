@@ -1,11 +1,12 @@
-import { SoluteTransportInput, StreamParametersDto } from './types';
+import { ModelInput, SourceMode, StreamParametersDto } from './types';
 
-type TopKey = Exclude<keyof SoluteTransportInput, 'parameters'>;
+type TopKey = Exclude<keyof ModelInput, 'parameters' | 'source'>;
 type ParamKey = keyof StreamParametersDto;
 
 /**
  * One tunable input. The slider spans [min, max]; a typed value may lie anywhere.
  * `log` sliders are logarithmic, and with `zero` their leftmost position is 0.
+ * A control with `source` set shows only for that source mode.
  */
 export interface ControlSpec {
   key: TopKey | ParamKey;
@@ -18,6 +19,7 @@ export interface ControlSpec {
   scale: 'linear' | 'log';
   zero?: boolean;
   integer?: boolean;
+  source?: SourceMode;
 }
 
 export interface ControlGroup {
@@ -30,20 +32,21 @@ const top = (key: TopKey, rest: Omit<ControlSpec, 'key' | 'inParameters'>): Cont
 const param = (key: ParamKey, rest: Omit<ControlSpec, 'key' | 'inParameters'>): ControlSpec =>
   ({ key, inParameters: true, ...rest });
 
-export const DEFAULT_INPUT: SoluteTransportInput = {
+export const DEFAULT_INPUT: ModelInput = {
   streamLength: 50,
-  totalDuration: 3600,
-  dt: 1,
-  dx: 0.5,
+  totalDuration: 900,
+  dt: 0.25,
+  dx: 0.1,
+  source: 'step',
   upstreamConcentration: 1,
-  upstreamDuration: 600,
-  outputTimeSteps: 10,
+  slugMass: 1,
+  stationCount: 4,
   parameters: {
     a: 1,
     aS: 0.1,
     cL: 0,
     d: 0.05,
-    q: 0.5,
+    q: 0.1,
     qLin: 0,
     alpha: 0.001,
     chatS: 0,
@@ -57,14 +60,12 @@ export const DEFAULT_INPUT: SoluteTransportInput = {
   },
 };
 
+export const SOURCE_CONTROLS: ControlSpec[] = [
+  top('upstreamConcentration', { label: 'Upstream concentration', symbol: 'C₀', unit: 'kg/m³', min: 0, max: 10, scale: 'linear', source: 'step' }),
+  top('slugMass', { label: 'Slug mass', symbol: 'M', unit: 'kg', min: 0.001, max: 100, scale: 'log', zero: true, source: 'slug' }),
+];
+
 export const CONTROL_GROUPS: ControlGroup[] = [
-  {
-    title: 'Upstream input',
-    controls: [
-      top('upstreamConcentration', { label: 'Pulse concentration', symbol: 'C₀', unit: 'kg/m³', min: 0, max: 10, scale: 'linear' }),
-      top('upstreamDuration', { label: 'Pulse duration', symbol: 'tₚ', unit: 's', min: 10, max: 14400, scale: 'log', zero: true }),
-    ],
-  },
   {
     title: 'Flow and channel',
     controls: [
@@ -100,24 +101,24 @@ export const CONTROL_GROUPS: ControlGroup[] = [
     controls: [
       top('streamLength', { label: 'Reach length', symbol: 'L', unit: 'm', min: 5, max: 500, scale: 'log' }),
       top('totalDuration', { label: 'Duration', symbol: 'T', unit: 's', min: 60, max: 14400, scale: 'log' }),
-      top('dt', { label: 'Time step', symbol: 'Δt', unit: 's', min: 0.5, max: 60, scale: 'log' }),
-      top('dx', { label: 'Segment length', symbol: 'Δx', unit: 'm', min: 0.1, max: 10, scale: 'log' }),
-      top('outputTimeSteps', { label: 'Snapshots', symbol: 'n', unit: '', min: 1, max: 30, scale: 'linear', integer: true }),
+      top('dt', { label: 'Time step', symbol: 'Δt', unit: 's', min: 0.05, max: 60, scale: 'log' }),
+      top('dx', { label: 'Segment length', symbol: 'Δx', unit: 'm', min: 0.02, max: 10, scale: 'log' }),
+      top('stationCount', { label: 'Evenly spaced stations', symbol: 'n', unit: '', min: 0, max: 8, scale: 'linear', integer: true }),
     ],
   },
 ];
 
-export function readValue(input: SoluteTransportInput, spec: ControlSpec): number {
+export function readValue(input: ModelInput, spec: ControlSpec): number {
   return spec.inParameters
     ? input.parameters[spec.key as ParamKey]
     : input[spec.key as TopKey];
 }
 
 export function writeValue(
-  input: SoluteTransportInput,
+  input: ModelInput,
   spec: ControlSpec,
   value: number
-): SoluteTransportInput {
+): ModelInput {
   return spec.inParameters
     ? { ...input, parameters: { ...input.parameters, [spec.key]: value } }
     : { ...input, [spec.key]: value };

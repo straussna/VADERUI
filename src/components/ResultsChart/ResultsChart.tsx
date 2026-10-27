@@ -1,7 +1,8 @@
-import { useMemo } from 'react';
 import Plot from 'react-plotly.js';
-import { SoluteTransportResult } from '../../types';
-import { formatTime } from '../../format';
+import { ObservedPoint } from '../../observed';
+import { Theme } from '../../theme';
+import { BreakthroughResult } from '../../types';
+import { TimeAxis } from '../../format';
 
 export interface SeriesVisibility {
   mainChannel: boolean;
@@ -9,76 +10,80 @@ export interface SeriesVisibility {
   sediment: boolean;
 }
 
+/** How to draw the model series at one station of the result. */
+export interface StationStyle {
+  label: string;
+  colour: string;
+}
+
+export interface ObservedTrace {
+  name: string;
+  colour: string;
+  points: ObservedPoint[];
+}
+
 interface ResultsChartProps {
-  results: SoluteTransportResult[];
+  result: BreakthroughResult;
+  stations: StationStyle[];
+  observed: ObservedTrace[];
   visible: SeriesVisibility;
+  timeAxis: TimeAxis;
+  theme: Theme;
   /** Zoom and pan persist while this stays the same. */
-  revision: number;
+  revision: string;
 }
 
-interface Theme {
-  surface: string;
-  rule: string;
-  ink: string;
-  soft: string;
-  faint: string;
-  ramp: string[];
-}
-
-function readTheme(): Theme {
-  const css = getComputedStyle(document.documentElement);
-  const token = (name: string) => css.getPropertyValue(name).trim();
-  return {
-    surface: token('--surface'),
-    rule: token('--rule'),
-    ink: token('--ink'),
-    soft: token('--soft'),
-    faint: token('--faint'),
-    ramp: ['--info', '--link', '--ok', '--accent'].map(token),
-  };
-}
-
-/** Colour at fraction `f` along the piecewise-linear ramp through `stops`. */
-function rampColour(stops: string[], f: number): string {
-  const rgb = stops.map((h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)));
-  const x = Math.min(1, Math.max(0, f)) * (rgb.length - 1);
-  const i = Math.min(rgb.length - 2, Math.floor(x));
-  const t = x - i;
-  const c = rgb[i].map((v, k) => Math.round(v + (rgb[i + 1][k] - v) * t));
-  return `rgb(${c.join(',')})`;
-}
-
-export default function ResultsChart({ results, visible, revision }: ResultsChartProps) {
-  const theme = useMemo(readTheme, []);
+/** Concentration over time at each station, with observed data as markers. */
+export default function ResultsChart({
+  result,
+  stations,
+  observed,
+  visible,
+  timeAxis,
+  theme,
+  revision,
+}: ResultsChartProps) {
   const narrow = window.matchMedia('(max-width: 48rem)').matches;
+  const time = result.time.map((t) => t / timeAxis.factor);
 
   const traces: Plotly.Data[] = [];
-  results.forEach((r, i) => {
-    const colour = rampColour(theme.ramp, results.length > 1 ? i / (results.length - 1) : 1);
-    const name = `${formatTime(r.time)}`;
+  result.stations.forEach((station, i) => {
+    const style = stations[i];
     const series: [boolean, number[], Plotly.Dash, string, string?][] = [
-      [visible.mainChannel, r.mainChannel, 'solid', 'C'],
-      [visible.storageZone, r.storageZone, 'dot', 'C_S'],
-      [visible.sediment, r.sediment, 'dash', 'C_sed', 'y2'],
+      [visible.mainChannel, station.mainChannel, 'solid', 'C'],
+      [visible.storageZone, station.storageZone, 'dot', 'C_S'],
+      [visible.sediment, station.sediment, 'dash', 'C_sed', 'y2'],
     ];
     let legendShown = false;
     for (const [on, y, dash, label, axis] of series) {
       if (!on) continue;
       traces.push({
-        x: r.distance,
+        x: time,
         y,
         type: 'scatter',
         mode: 'lines',
-        name,
-        legendgroup: `t${i}`,
+        name: style.label,
+        legendgroup: `s${i}`,
         showlegend: !legendShown,
-        line: { color: colour, dash, width: dash === 'solid' ? 2 : 1.6 },
-        hovertemplate: `${label} %{y:.4g} at x = %{x:.3g} m, t = ${name}<extra></extra>`,
+        line: { color: style.colour, dash, width: dash === 'solid' ? 2 : 1.6 },
+        hovertemplate: `${label} %{y:.4g} at t = %{x:.4g} ${timeAxis.unit}, ${style.label}<extra></extra>`,
         yaxis: axis,
       });
       legendShown = true;
     }
   });
+
+  for (const o of observed) {
+    traces.push({
+      x: o.points.map((p) => p.time / timeAxis.factor),
+      y: o.points.map((p) => p.concentration),
+      type: 'scatter',
+      mode: 'markers',
+      name: `${o.name} (observed)`,
+      marker: { color: o.colour, size: 7, line: { color: theme.surface, width: 1 } },
+      hovertemplate: `${o.name} %{y:.4g} at t = %{x:.4g} ${timeAxis.unit}<extra></extra>`,
+    });
+  }
 
   const axis = {
     gridcolor: theme.rule,
@@ -96,7 +101,7 @@ export default function ResultsChart({ results, visible, revision }: ResultsChar
     plot_bgcolor: theme.surface,
     font: { family: 'Fira Sans, system-ui, sans-serif', color: theme.soft },
     margin: { l: narrow ? 52 : 64, r: visible.sediment ? 64 : 16, t: 12, b: narrow ? 40 : 52 },
-    xaxis: { ...axis, title: { ...axis.title, text: 'Distance from upstream boundary (m)' } },
+    xaxis: { ...axis, title: { ...axis.title, text: `Time (${timeAxis.unit})` }, rangemode: 'tozero' },
     yaxis: { ...axis, title: { ...axis.title, text: 'Concentration (kg/m³)' }, rangemode: 'tozero' },
     yaxis2: {
       ...axis,
@@ -109,7 +114,7 @@ export default function ResultsChart({ results, visible, revision }: ResultsChar
     },
     showlegend: !narrow,
     legend: {
-      title: { text: 'Time', font: { color: theme.faint, size: 11 } },
+      title: { text: 'Station', font: { color: theme.faint, size: 11 } },
       font: { color: theme.soft, size: 11 },
       bgcolor: 'rgba(0,0,0,0)',
     },

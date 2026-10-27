@@ -35,7 +35,11 @@ export interface StreamParametersDto {
   qLout: number;
 }
 
-export interface SoluteTransportInput {
+/** "step": a constant concentration switched on upstream at t = 0; "slug": a mass dumped upstream at t = 0. */
+export type SourceMode = 'step' | 'slug';
+
+/** Values the page's controls edit. */
+export interface ModelInput {
   /** Total length of the stream reach (m). */
   streamLength: number;
   /** Total simulation duration (s). */
@@ -44,25 +48,48 @@ export interface SoluteTransportInput {
   dt: number;
   /** Spatial segment length (m). */
   dx: number;
-  /** Upstream-boundary concentration (kg/m³). */
+  source: SourceMode;
+  /** Upstream-boundary concentration of a step source (kg/m³). */
   upstreamConcentration: number;
-  /** Duration (s) for which the upstream concentration is held; zero thereafter. */
-  upstreamDuration: number;
-  /** Number of evenly-spaced time snapshots in the response. */
-  outputTimeSteps: number;
+  /** Solute mass of a slug source (kg). */
+  slugMass: number;
+  /** Number of evenly spaced stations, at streamLength * k / stationCount for k = 1 … stationCount. */
+  stationCount: number;
   /** Stream physical and chemical parameters. */
   parameters: StreamParametersDto;
 }
 
-export interface SoluteTransportResult {
-  /** Simulation time for this snapshot (s). */
-  time: number;
-  /** Distance from the upstream end at each spatial segment (m). */
-  distance: number[];
-  /** Main-channel solute concentration at each segment (kg/m³). */
+/** Request body of POST /api/calculate. */
+export interface SimulationRequest {
+  streamLength: number;
+  totalDuration: number;
+  dt: number;
+  dx: number;
+  source: SourceMode;
+  upstreamConcentration: number;
+  slugMass: number;
+  /** Distances from the upstream boundary (m) at which concentrations are returned. */
+  stations: number[];
+  parameters: StreamParametersDto;
+}
+
+export interface StationSeries {
+  /** Requested distance from the upstream boundary (m). */
+  distance: number;
+  /** Centre of the segment containing the station (m). */
+  segmentCentre: number;
+  /** Main-channel solute concentration at each sample (kg/m³). */
   mainChannel: number[];
-  /** Transient-storage zone solute concentration at each segment (kg/m³). */
+  /** Transient-storage zone solute concentration at each sample (kg/m³). */
   storageZone: number[];
-  /** Sediment-sorbed solute concentration at each segment (kg/kg). */
+  /** Sediment-sorbed solute concentration at each sample (kg/kg). */
   sediment: number[];
+}
+
+/** Response of POST /api/calculate. */
+export interface BreakthroughResult {
+  /** Simulation time of each sample (s). */
+  time: number[];
+  /** One series per requested station, in request order. */
+  stations: StationSeries[];
 }

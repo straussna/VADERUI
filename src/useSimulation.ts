@@ -1,11 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { calculateTransport, describeError } from './api/soluteTransport';
-import { SoluteTransportInput, SoluteTransportResult } from './types';
+import { BreakthroughResult, SimulationRequest } from './types';
 
-export interface SimulationState {
-  results: SoluteTransportResult[];
-  /** Input that produced `results`. */
-  shownInput: SoluteTransportInput | null;
+/** A request plus whatever the caller needs to read its result. */
+export interface Plan {
+  request: SimulationRequest;
+}
+
+export interface SimulationState<P extends Plan> {
+  result: BreakthroughResult | null;
+  /** Plan whose request produced `result`. */
+  shownPlan: P | null;
   error: string | null;
   busy: boolean;
   run: () => void;
@@ -13,36 +18,36 @@ export interface SimulationState {
 
 /**
  * Keeps at most one request in flight. A change made while a request runs is
- * sent when that request returns, so only the newest input is computed.
+ * sent when that request returns, so only the newest plan is computed.
  * With `auto` false, runs happen only through `run`.
  */
-export function useSimulation(input: SoluteTransportInput, auto: boolean): SimulationState {
-  const [results, setResults] = useState<SoluteTransportResult[]>([]);
-  const [shownInput, setShownInput] = useState<SoluteTransportInput | null>(null);
+export function useSimulation<P extends Plan>(plan: P, auto: boolean): SimulationState<P> {
+  const [result, setResult] = useState<BreakthroughResult | null>(null);
+  const [shownPlan, setShownPlan] = useState<P | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const latest = useRef(input);
-  latest.current = input;
+  const latest = useRef(plan);
+  latest.current = plan;
   const autoRef = useRef(auto);
   autoRef.current = auto;
   const inFlight = useRef(false);
 
   const run = useCallback(function send() {
     if (inFlight.current) return;
-    const request = latest.current;
+    const sent = latest.current;
     inFlight.current = true;
     setBusy(true);
-    calculateTransport(request)
+    calculateTransport(sent.request)
       .then((r) => {
-        setResults(r);
-        setShownInput(request);
+        setResult(r);
+        setShownPlan(sent);
         setError(null);
       })
       .catch((e: unknown) => setError(describeError(e)))
       .finally(() => {
         inFlight.current = false;
-        if (latest.current !== request && autoRef.current) send();
+        if (latest.current !== sent && autoRef.current) send();
         else setBusy(false);
       });
   }, []);
@@ -51,7 +56,7 @@ export function useSimulation(input: SoluteTransportInput, auto: boolean): Simul
     if (!auto) return;
     const timer = setTimeout(run, 30);
     return () => clearTimeout(timer);
-  }, [input, auto, run]);
+  }, [plan, auto, run]);
 
-  return { results, shownInput, error, busy, run };
+  return { result, shownPlan, error, busy, run };
 }

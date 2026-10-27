@@ -12,12 +12,18 @@ public record SimulationRequest(
     double Dt,
     /// <summary>Spatial segment length (m).</summary>
     double Dx,
-    /// <summary>Upstream-boundary solute concentration (kg/m³) applied at the start of the simulation.</summary>
+    /// <summary>
+    /// Upstream source: "step" holds <see cref="UpstreamConcentration"/> at the
+    /// upstream boundary from t = 0; "slug" injects <see cref="SlugMass"/> at
+    /// the upstream boundary during the first time step.
+    /// </summary>
+    string Source,
+    /// <summary>Upstream-boundary concentration of a step source (kg/m³).</summary>
     double UpstreamConcentration,
-    /// <summary>Duration (s) for which the upstream-boundary concentration is held constant; zero thereafter.</summary>
-    double UpstreamDuration,
-    /// <summary>Number of evenly-spaced time snapshots to include in the response.</summary>
-    int OutputTimeSteps,
+    /// <summary>Solute mass of a slug source (kg).</summary>
+    double SlugMass,
+    /// <summary>Distances from the upstream boundary (m) at which concentrations are returned.</summary>
+    double[] Stations,
     /// <summary>Stream physical and chemical parameters.</summary>
     StreamParametersDto Parameters);
 

@@ -3,11 +3,18 @@ VADERUI - Solute Transport UI
 
 A React + TypeScript single-page application backed by an ASP.NET Core Web API
 that uses the SoluteTransport NuGet package (https://github.com/straussna/SoluteTransport)
-to run 1-D solute advection-dispersion simulations. Each parameter has a
-slider over a typical range and a box that accepts any typed value; the
-concentration profiles for the main channel, transient-storage zone and
-sediment recompute as values change. Grids above 2e8 segment-steps wait for
-the Run button instead of recomputing on every change.
+to run 1-D solute advection-dispersion simulations. The page plots
+concentration over time at stations along the reach for one of two upstream
+sources: a step, a constant concentration switched on at t = 0, or a slug, a
+mass dumped in at t = 0. Each parameter has a slider over a typical range and
+a box that accepts any typed value; the curves recompute as values change.
+Grids above 2e8 segment-steps wait for the Run button instead.
+
+Measured time, concentration pairs can be pasted or loaded from a CSV file
+with the distance they were taken at. Each set is drawn as markers beside the
+model curve at that distance, with the root-mean-square error and the
+Nash-Sutcliffe efficiency of the fit. Data sets are kept in the browser's
+local storage.
 
 The papers behind the transport model are in the SoluteTransport repository's
 documentation site, docs/index.html.
@@ -39,98 +46,39 @@ Project structure
   api/                          ASP.NET Core backend
     VADERUI.Api.csproj
     nuget.config                Includes GitHub Packages + local fallback
-    packages/                   Bundled SoluteTransport.1.4.0.nupkg
+    packages/                   Bundled SoluteTransport.1.5.0.nupkg
     Models/
       SimulationRequest.cs
-      SimulationSnapshot.cs
-    Program.cs                  POST /api/calculate endpoint
-  public/
-    style.css                   House stylesheet
-    palette.css                 Forest-river colour tokens
-  src/                          React + TypeScript frontend
-    api/soluteTransport.ts      Axios client and API error messages
-    components/
-      ParameterControl.tsx      Slider with a typed-value box
-      ResultsChart/             Plotly concentration profile chart
-    types/index.ts              TypeScript interfaces
-    controls.ts                 Defaults, slider ranges and scales
-    useSimulation.ts            Live recomputation, one request in flight
-    App.tsx                     Page layout
-    main.tsx                    Entry point
+      BreakthroughResult.cs
+    Program.cs                  POST /api/calculate
 
+Runs the 1-D ADE simulation and returns concentrations over time at each
+station. A station's values are those of the segment containing it; segment
+i spans [i dx, (i + 1) dx) and its centre is (i + 0.5) * dx. Times are at
+most 1001 evenly strided time levels from 0 to totalDuration.
 
-Setup and running
------------------
-
-1. Start the backend API (http://localhost:5000):
-
-     cd api
-     dotnet run
-
-   The SoluteTransport NuGet package is sourced from the bundled
-   api/packages/SoluteTransport.1.4.0.nupkg file. With a GitHub Personal Access
-   Token that has read:packages scope, it can also be pulled from GitHub
-   Packages by setting GITHUB_TOKEN in the environment.
-
-2. Start the frontend (http://localhost:5173), from the repository root:
-
-     npm install
-     npm run dev
-
-
-Environment variables
----------------------
-
-  VITE_API_BASE_URL   default http://localhost:5000/api
-                      Base URL of the VADERUI backend API
-
-Create a .env file in the project root to override:
-
-  VITE_API_BASE_URL=http://localhost:5000/api
-
-
-Available scripts
------------------
-
-Frontend:
-
-  npm run dev        Start development server
-  npm run build      Type-check and build for production
-  npm run preview    Preview the production build locally
-  npm run lint       Run ESLint
-
-Backend:
-
-  dotnet run         Start development API server
-  dotnet build       Build the project
-  dotnet publish     Publish for production
-
-
-API
----
-
-POST /api/calculate
-
-Runs the 1-D ADE simulation and returns concentration profiles at
-evenly-spaced time snapshots, the last at totalDuration. Distances are
-segment centres, (i + 0.5) * dx from the upstream boundary.
+source is "step" or "slug". A step holds upstreamConcentration (kg/m3) at
+the upstream boundary from t = 0. A slug sets the boundary concentration to
+2 slugMass / (Q dt) at t = 0 and zero after, so the advective inflow of the
+first time step carries slugMass (kg) into the reach; a slug needs Q > 0.
 
 Request body:
 
   {
     "streamLength": 50.0,
-    "totalDuration": 3600.0,
-    "dt": 1.0,
-    "dx": 0.5,
+    "totalDuration": 900.0,
+    "dt": 0.25,
+    "dx": 0.1,
+    "source": "slug",
     "upstreamConcentration": 1.0,
-    "upstreamDuration": 600.0,
-    "outputTimeSteps": 10,
+    "slugMass": 1.0,
+    "stations": [12.5, 25.0, 37.5, 50.0],
     "parameters": {
       "a": 1.0,
       "aS": 0.1,
       "cL": 0.0,
       "d": 0.05,
-      "q": 0.5,
+      "q": 0.1,
       "qLin": 0.0,
       "alpha": 0.001,
       "chatS": 0.0,
@@ -144,14 +92,17 @@ Request body:
     }
   }
 
-Response: an array of snapshots, one per output time step:
+Response:
 
-  [
-    {
-      "time": 360.0,
-      "distance": [0.25, 0.75, 1.25, "..."],
-      "mainChannel": [0.0, 0.12, 0.35, "..."],
-      "storageZone": [0.0, 0.08, 0.22, "..."],
-      "sediment": [0.0, 0.0, 0.0, "..."]
-    }
-  ]
+  {
+    "time": [0.0, 1.0, 2.0, "..."],
+    "stations": [
+      {
+        "distance": 12.5,
+        "segmentCentre": 12.55,
+        "mainChannel": [0.0, 0.0, 0.0, "..."],
+        "storageZone": [0.0, 0.0, 0.0, "..."],
+        "sediment": [0.0, 0.0, 0.0, "..."]
+      }
+    ]
+  }
