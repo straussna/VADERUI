@@ -65,7 +65,16 @@ app.MapPost("/api/calculate", (SimulationRequest req) =>
             upstreamBoundary,
             parameters);
 
-        result = stream.SimulateAdvectionAndDispersion();
+        // Evenly-spaced time levels across [1 .. TimeStepCount], skipping
+        // level 0 (the initial all-zero state). Snapshot k (0-based) is
+        //   j = round( (k+1) / outputCount * TimeStepCount )
+        // so the last snapshot lands on t = totalDuration.
+        int outputCount = Math.Min(req.OutputTimeSteps, stream.TimeStepCount);
+        int[] levels = Enumerable.Range(0, outputCount)
+            .Select(k => (int)Math.Round((double)(k + 1) / outputCount * stream.TimeStepCount))
+            .ToArray();
+
+        result = stream.SimulateAdvectionAndDispersion(levels);
     }
     catch (ArgumentException ex)
     {
@@ -73,35 +82,26 @@ app.MapPost("/api/calculate", (SimulationRequest req) =>
     }
 
     int numberOfSegments = result.C.GetLength(0);
-    int numberOfTimeLevels = result.C.GetLength(1);
 
     // Segment i is centred at (i + 0.5) * dx; the upstream boundary is at x = 0.
     double[] distance = new double[numberOfSegments];
     for (int i = 0; i < numberOfSegments; i++)
         distance[i] = (i + 0.5) * req.Dx;
 
-    // Select evenly-spaced time levels across [1 .. numberOfTimeLevels-1],
-    // skipping level 0 (the initial all-zero state).
-    // For snapshot k (0-based), the formula maps to:
-    //   j = round( (k+1) / outputCount * (numberOfTimeLevels - 1) )
-    // so that the last snapshot lands on the final time level, t = totalDuration.
-    int outputCount = Math.Min(req.OutputTimeSteps, numberOfTimeLevels - 1);
-    var snapshots = new List<SimulationSnapshot>(outputCount);
+    var snapshots = new List<SimulationSnapshot>(result.TimeLevels.Length);
 
-    for (int k = 0; k < outputCount; k++)
+    for (int k = 0; k < result.TimeLevels.Length; k++)
     {
-        int j = (int)Math.Round((double)(k + 1) / outputCount * (numberOfTimeLevels - 1));
-
-        double time = j * req.Dt;
+        double time = result.TimeLevels[k] * req.Dt;
         double[] mainChannel = new double[numberOfSegments];
         double[] storageZone = new double[numberOfSegments];
         double[] sediment = new double[numberOfSegments];
 
         for (int i = 0; i < numberOfSegments; i++)
         {
-            mainChannel[i] = result.C[i, j];
-            storageZone[i] = result.CS[i, j];
-            sediment[i] = result.CSed[i, j];
+            mainChannel[i] = result.C[i, k];
+            storageZone[i] = result.CS[i, k];
+            sediment[i] = result.CSed[i, k];
         }
 
         snapshots.Add(new SimulationSnapshot(time, distance, mainChannel, storageZone, sediment));
