@@ -74,7 +74,8 @@ most 1001 evenly strided time levels from 0 to totalDuration.
 source is "pulse", "step" or "slug". A pulse holds upstreamConcentration
 (kg/m3) at the upstream boundary for time levels 0 ... n - 1, where
 n = round(pulseDuration / dt), and half of it at level n, so the advective
-inflow carries Q upstreamConcentration n dt; the boundary is zero after. A
+inflow carries Q upstreamConcentration n dt; the boundary is zero at every
+other level, so a pulse with n = 0 injects nothing. A
 step holds upstreamConcentration from t = 0. A slug sets the boundary concentration to
 2 slugMass / (Q dt) at t = 0 and zero after, so the advective inflow of the
 first time step carries slugMass (kg) into the reach; a slug needs Q > 0.

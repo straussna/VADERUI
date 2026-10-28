@@ -58,9 +58,9 @@ app.MapPost("/api/calculate", (SimulationRequest req) =>
         QLout: p.QLout);
 
     // One upstream-boundary value per time level j (time j * dt), 0 … totalSteps.
-    // A step holds C0 throughout. A pulse holds C0 for levels 0 … n - 1,
-    // n = round(tau / dt), and C0 / 2 at level n, so its advective inflow is
-    // Q C0 n dt; levels after n are zero. A slug sets level 0 only, to 2 M / (Q dt):
+    // A step holds C0 throughout. A pulse of n = round(tau / dt) steps holds C0
+    // for levels 0 … n - 1 and C0 / 2 at level n, so its advective inflow is
+    // Q C0 n dt; every other level is zero, so n = 0 injects nothing. A slug sets level 0 only, to 2 M / (Q dt):
     // the first time step's advective inflow, Q dt (Cbc[0] + Cbc[1]) / 2,
     // carries mass M, and the dispersive exchange across the upstream face
     // returns to zero net mass once Cbc is zero.
@@ -72,7 +72,7 @@ app.MapPost("/api/calculate", (SimulationRequest req) =>
     {
         int n = (int)Math.Round(req.PulseDuration / req.Dt);
         Array.Fill(upstreamBoundary, req.UpstreamConcentration, 0, Math.Min(n, upstreamBoundary.Length));
-        if (n < upstreamBoundary.Length)
+        if (n > 0 && n < upstreamBoundary.Length)
             upstreamBoundary[n] = req.UpstreamConcentration / 2;
     }
     else

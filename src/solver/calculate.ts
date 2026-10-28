@@ -21,8 +21,9 @@ export function calculate(req: SimulationRequest): BreakthroughResult {
   if (req.stations.some((x) => !Number.isFinite(x))) throw new Error('stations must be finite distances.');
 
   // One upstream-boundary value per time level. A step holds C0 throughout. A
-  // pulse holds C0 for levels 0 … n - 1, n = round(tau / dt), and C0 / 2 at
-  // level n, so its inflow is Q C0 n dt; levels after n are zero. A slug sets
+  // pulse of n = round(tau / dt) steps holds C0 for levels 0 … n - 1 and C0 / 2
+  // at level n, so its inflow is Q C0 n dt; every other level is zero, so n = 0
+  // injects nothing. A slug sets
   // level 0 to 2 M / (Q dt), so the first step's inflow carries M.
   const totalSteps = roundHalfEven(req.totalDuration / req.dt);
   const upstreamBoundary = new Float64Array(Math.max(totalSteps, 0) + 1);
@@ -30,7 +31,7 @@ export function calculate(req: SimulationRequest): BreakthroughResult {
   else if (req.source === 'pulse') {
     const n = roundHalfEven(req.pulseDuration / req.dt);
     upstreamBoundary.fill(req.upstreamConcentration, 0, Math.min(n, upstreamBoundary.length));
-    if (n < upstreamBoundary.length) upstreamBoundary[n] = req.upstreamConcentration / 2;
+    if (n > 0 && n < upstreamBoundary.length) upstreamBoundary[n] = req.upstreamConcentration / 2;
   } else upstreamBoundary[0] = (2 * req.slugMass) / (req.parameters.q * req.dt);
 
   const stream = new Stream(req.streamLength, req.totalDuration, req.dt, req.dx, upstreamBoundary, req.parameters);
