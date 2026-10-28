@@ -24,6 +24,11 @@ const SERIES: { key: keyof SeriesVisibility; label: string; mark: string }[] = [
 
 const SOURCES: { mode: SourceMode; label: string; description: string }[] = [
   {
+    mode: 'pulse',
+    label: 'Pulse',
+    description: 'A tracer injected upstream at C₀ from t = 0 for a duration τ, after which the stream returns to its background state.',
+  },
+  {
     mode: 'step',
     label: 'Step',
     description: 'A steady source switched on upstream at t = 0 and held at C₀.',
@@ -89,6 +94,7 @@ export default function App() {
       dx: input.dx,
       source: input.source,
       upstreamConcentration: input.upstreamConcentration,
+      pulseDuration: input.pulseDuration,
       slugMass: input.slugMass,
       stations,
       parameters: input.parameters,
@@ -124,8 +130,8 @@ export default function App() {
         <p className="eyebrow">VADER · OTIS transient-storage model</p>
         <h1>Solute breakthrough along a stream reach</h1>
         <p className="standfirst">
-          Concentration over time at stations along the reach, for a steady step source or a
-          slug dumped upstream. Move a slider or type a value and the curves recompute; add
+          Concentration over time at stations along the reach, for a timed injection, a steady
+          step source or a slug dumped upstream. Move a slider or type a value and the curves recompute; add
           measured data to compare.
         </p>
       </header>
@@ -224,7 +230,7 @@ export default function App() {
               ))}
             </div>
             <p className="lede source-note">{source.description}</p>
-            {SOURCE_CONTROLS.filter((spec) => spec.source === input.source).map((spec) => (
+            {SOURCE_CONTROLS.filter((spec) => spec.sources?.includes(input.source)).map((spec) => (
               <ParameterControl key={spec.key} spec={spec} value={readValue(input, spec)} onChange={setValue(spec)} />
             ))}
           </section>

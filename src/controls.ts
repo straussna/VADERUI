@@ -6,7 +6,7 @@ type ParamKey = keyof StreamParametersDto;
 /**
  * One tunable input. The slider spans [min, max]; a typed value may lie anywhere.
  * `log` sliders are logarithmic, and with `zero` their leftmost position is 0.
- * A control with `source` set shows only for that source mode.
+ * A control with `sources` set shows only for those source modes.
  */
 export interface ControlSpec {
   key: TopKey | ParamKey;
@@ -19,7 +19,7 @@ export interface ControlSpec {
   scale: 'linear' | 'log';
   zero?: boolean;
   integer?: boolean;
-  source?: SourceMode;
+  sources?: SourceMode[];
 }
 
 export interface ControlGroup {
@@ -34,11 +34,12 @@ const param = (key: ParamKey, rest: Omit<ControlSpec, 'key' | 'inParameters'>): 
 
 export const DEFAULT_INPUT: ModelInput = {
   streamLength: 50,
-  totalDuration: 900,
+  totalDuration: 1800,
   dt: 0.25,
   dx: 0.1,
-  source: 'step',
+  source: 'pulse',
   upstreamConcentration: 1,
+  pulseDuration: 300,
   slugMass: 1,
   stationCount: 4,
   parameters: {
@@ -61,8 +62,9 @@ export const DEFAULT_INPUT: ModelInput = {
 };
 
 export const SOURCE_CONTROLS: ControlSpec[] = [
-  top('upstreamConcentration', { label: 'Upstream concentration', symbol: 'C₀', unit: 'kg/m³', min: 0, max: 10, scale: 'linear', source: 'step' }),
-  top('slugMass', { label: 'Slug mass', symbol: 'M', unit: 'kg', min: 0.001, max: 100, scale: 'log', zero: true, source: 'slug' }),
+  top('upstreamConcentration', { label: 'Upstream concentration', symbol: 'C₀', unit: 'kg/m³', min: 0, max: 10, scale: 'linear', sources: ['pulse', 'step'] }),
+  top('pulseDuration', { label: 'Injection duration', symbol: 'τ', unit: 's', min: 1, max: 14400, scale: 'log', sources: ['pulse'] }),
+  top('slugMass', { label: 'Slug mass', symbol: 'M', unit: 'kg', min: 0.001, max: 100, scale: 'log', zero: true, sources: ['slug'] }),
 ];
 
 export const CONTROL_GROUPS: ControlGroup[] = [

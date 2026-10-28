@@ -4,9 +4,10 @@ VADERUI - Solute Transport UI
 A React + TypeScript single-page application backed by an ASP.NET Core Web API
 that uses the SoluteTransport NuGet package (https://github.com/straussna/SoluteTransport)
 to run 1-D solute advection-dispersion simulations. The page plots
-concentration over time at stations along the reach for one of two upstream
-sources: a step, a constant concentration switched on at t = 0, or a slug, a
-mass dumped in at t = 0. Each parameter has a slider over a typical range and
+concentration over time at stations along the reach for one of three upstream
+sources: a pulse, a constant concentration injected from t = 0 for a set
+duration and then switched off; a step, a constant concentration switched on
+at t = 0 and held; or a slug, a mass dumped in at t = 0. Each parameter has a slider over a typical range and
 a box that accepts any typed value; the curves recompute as values change.
 Grids above 2e8 segment-steps wait for the Run button instead.
 
@@ -68,8 +69,11 @@ station. A station's values are those of the segment containing it; segment
 i spans [i dx, (i + 1) dx) and its centre is (i + 0.5) * dx. Times are at
 most 1001 evenly strided time levels from 0 to totalDuration.
 
-source is "step" or "slug". A step holds upstreamConcentration (kg/m3) at
-the upstream boundary from t = 0. A slug sets the boundary concentration to
+source is "pulse", "step" or "slug". A pulse holds upstreamConcentration
+(kg/m3) at the upstream boundary for time levels 0 ... n - 1, where
+n = round(pulseDuration / dt), and half of it at level n, so the advective
+inflow carries Q upstreamConcentration n dt; the boundary is zero after. A
+step holds upstreamConcentration from t = 0. A slug sets the boundary concentration to
 2 slugMass / (Q dt) at t = 0 and zero after, so the advective inflow of the
 first time step carries slugMass (kg) into the reach; a slug needs Q > 0.
 
@@ -82,6 +86,7 @@ Request body:
     "dx": 0.1,
     "source": "slug",
     "upstreamConcentration": 1.0,
+    "pulseDuration": 300.0,
     "slugMass": 1.0,
     "stations": [12.5, 25.0, 37.5, 50.0],
     "parameters": {

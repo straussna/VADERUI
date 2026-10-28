@@ -28,8 +28,10 @@ app.MapPost("/api/calculate", (SimulationRequest req) =>
         return Results.BadRequest("dt must be positive.");
     if (req.Dx <= 0)
         return Results.BadRequest("dx must be positive.");
-    if (req.Source is not ("step" or "slug"))
-        return Results.BadRequest("source must be \"step\" or \"slug\".");
+    if (req.Source is not ("pulse" or "step" or "slug"))
+        return Results.BadRequest("source must be \"pulse\", \"step\" or \"slug\".");
+    if (req.Source == "pulse" && !(req.PulseDuration >= 0))
+        return Results.BadRequest("pulseDuration must not be negative.");
     if (req.Source == "slug" && req.Parameters.Q <= 0)
         return Results.BadRequest("Q must be positive for a slug source.");
     if (req.Stations is null || req.Stations.Length == 0)
@@ -56,7 +58,9 @@ app.MapPost("/api/calculate", (SimulationRequest req) =>
         QLout: p.QLout);
 
     // One upstream-boundary value per time level j (time j * dt), 0 … totalSteps.
-    // A step holds C0 throughout. A slug sets level 0 only, to 2 M / (Q dt):
+    // A step holds C0 throughout. A pulse holds C0 for levels 0 … n - 1,
+    // n = round(tau / dt), and C0 / 2 at level n, so its advective inflow is
+    // Q C0 n dt; levels after n are zero. A slug sets level 0 only, to 2 M / (Q dt):
     // the first time step's advective inflow, Q dt (Cbc[0] + Cbc[1]) / 2,
     // carries mass M, and the dispersive exchange across the upstream face
     // returns to zero net mass once Cbc is zero.
@@ -64,6 +68,13 @@ app.MapPost("/api/calculate", (SimulationRequest req) =>
     double[] upstreamBoundary = new double[Math.Max(totalSteps, 0) + 1];
     if (req.Source == "step")
         Array.Fill(upstreamBoundary, req.UpstreamConcentration);
+    else if (req.Source == "pulse")
+    {
+        int n = (int)Math.Round(req.PulseDuration / req.Dt);
+        Array.Fill(upstreamBoundary, req.UpstreamConcentration, 0, Math.Min(n, upstreamBoundary.Length));
+        if (n < upstreamBoundary.Length)
+            upstreamBoundary[n] = req.UpstreamConcentration / 2;
+    }
     else
         upstreamBoundary[0] = 2 * req.SlugMass / (p.Q * req.Dt);
 

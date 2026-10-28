@@ -13,13 +13,16 @@ public record SimulationRequest(
     /// <summary>Spatial segment length (m).</summary>
     double Dx,
     /// <summary>
-    /// Upstream source: "step" holds <see cref="UpstreamConcentration"/> at the
-    /// upstream boundary from t = 0; "slug" injects <see cref="SlugMass"/> at
+    /// Upstream source: "pulse" holds <see cref="UpstreamConcentration"/> at the
+    /// upstream boundary from t = 0 for <see cref="PulseDuration"/>, then zero;
+    /// "step" holds <see cref="UpstreamConcentration"/> from t = 0; "slug" injects <see cref="SlugMass"/> at
     /// the upstream boundary during the first time step.
     /// </summary>
     string Source,
-    /// <summary>Upstream-boundary concentration of a step source (kg/m³).</summary>
+    /// <summary>Upstream-boundary concentration of a pulse or step source (kg/m³).</summary>
     double UpstreamConcentration,
+    /// <summary>Injection duration of a pulse source (s).</summary>
+    double PulseDuration,
     /// <summary>Solute mass of a slug source (kg).</summary>
     double SlugMass,
     /// <summary>Distances from the upstream boundary (m) at which concentrations are returned.</summary>

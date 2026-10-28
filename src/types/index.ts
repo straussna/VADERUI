@@ -35,8 +35,12 @@ export interface StreamParametersDto {
   qLout: number;
 }
 
-/** "step": a constant concentration switched on upstream at t = 0; "slug": a mass dumped upstream at t = 0. */
-export type SourceMode = 'step' | 'slug';
+/**
+ * "pulse": a constant concentration held upstream from t = 0 for a set duration, then zero;
+ * "step": a constant concentration switched on upstream at t = 0 and held;
+ * "slug": a mass dumped upstream at t = 0.
+ */
+export type SourceMode = 'pulse' | 'step' | 'slug';
 
 /** Values the page's controls edit. */
 export interface ModelInput {
@@ -49,8 +53,10 @@ export interface ModelInput {
   /** Spatial segment length (m). */
   dx: number;
   source: SourceMode;
-  /** Upstream-boundary concentration of a step source (kg/m³). */
+  /** Upstream-boundary concentration of a pulse or step source (kg/m³). */
   upstreamConcentration: number;
+  /** Injection duration of a pulse source (s). */
+  pulseDuration: number;
   /** Solute mass of a slug source (kg). */
   slugMass: number;
   /** Number of evenly spaced stations, at streamLength * k / stationCount for k = 1 … stationCount. */
@@ -67,6 +73,7 @@ export interface SimulationRequest {
   dx: number;
   source: SourceMode;
   upstreamConcentration: number;
+  pulseDuration: number;
   slugMass: number;
   /** Distances from the upstream boundary (m) at which concentrations are returned. */
   stations: number[];
