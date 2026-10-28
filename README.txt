@@ -9,7 +9,8 @@ sources: a pulse, a constant concentration injected from t = 0 for a set
 duration and then switched off; a step, a constant concentration switched on
 at t = 0 and held; or a slug, a mass dumped in at t = 0. Each parameter has a slider over a typical range and
 a box that accepts any typed value; the curves recompute as values change.
-Grids above 2e8 segment-steps wait for the Run button instead.
+Grids that would take more than about two seconds to solve wait for the Run
+button instead.
 
 Measured time, concentration pairs can be pasted or loaded from a CSV file
 with the distance they were taken at. Each set is drawn as markers beside the
@@ -21,15 +22,16 @@ The papers behind the transport model are in the SoluteTransport repository's
 documentation site, docs/index.html.
 
 
-Standalone file
----------------
+Export
+------
 
-  npm run build:standalone
+  npm run build
 
-writes dist-standalone/index.html, one self-contained page that opens from
-disk with no server. It runs src/solver/, a TypeScript port of the
-SoluteTransport solver and of POST /api/calculate, in a web worker; its
-results match the API's.
+writes dist/VADER.html, the app as one self-contained page that opens from
+disk in a desktop browser with no server or install. It runs src/solver/, a
+TypeScript port of the SoluteTransport solver and of POST /api/calculate, in
+a web worker; its results match the API's. The dev server (npm run dev) calls
+the API instead.
 
 
 Tech stack
